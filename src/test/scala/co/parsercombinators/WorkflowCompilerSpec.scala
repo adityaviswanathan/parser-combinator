@@ -18,6 +18,21 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |dummy3 = ENUM.COMPONENT.STATIC
     """.stripMargin.trim
 
+  val multiConstructorDeclare = 
+    """
+      |dummy = Property(
+      |  Name : "NewProperty",
+      |  Enum : ENUM.ELEMENT.HEADER
+      |)
+      |dummy2 = Entity(
+      |  Props : [dummy, Property(
+      |    Name : "SecondProperty",
+      |    Enum : ENUM.ELEMENT.INPUT
+      |  )],
+      |  Name : "NewEntity" 
+      |)
+    """.stripMargin.trim
+
   val multiTypeDeclare = 
     """
       |dummy = Property(
@@ -129,6 +144,27 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     Variable("dummy2", VariableValue("dummy")),
     Variable("dummy3", EnumValue(Enum("ComponentType", "STATIC")))
   ))
+  val multiConstructorAST = AndThen(Variable("dummy", ConstructorValue(
+    Property(
+      List(
+        AttributeToValue("Name", StringValue("NewProperty")),
+        AttributeToValue("Enum", EnumValue(Enum("ElementType", "HEADER")))
+      )
+    )
+  )), Variable("dummy2", ConstructorValue(
+    Entity(
+      List(
+        AttributeToList("Props", List(
+          VariableValue("dummy"),
+          ConstructorValue(Property(List(
+              AttributeToValue("Name", StringValue("SecondProperty")),
+              AttributeToValue("Enum", EnumValue(Enum("ElementType", "INPUT")))
+          )))
+        )),
+        AttributeToValue("Name", StringValue("NewEntity"))
+      )
+    )
+  )))
   val multiTypeAST = Variable("dummy", ConstructorValue(
     Property(
       List(
@@ -177,8 +213,12 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     WorkflowCompiler(simpleDeclare) shouldBe Right(simpleAST)
   }
 
-  it should "successfully parse a multiple simple variable declarations" in {
+  it should "successfully parse multiple simple variable declarations" in {
     WorkflowCompiler(multiSimpleDeclare) shouldBe Right(multiSimpleAST)
+  }
+
+  it should "successfully parse multiple constructor declarations" in {
+    WorkflowCompiler(multiConstructorDeclare) shouldBe Right(multiConstructorAST)
   }
 
   it should "successfully parse a multi-type constructor declaration" in {

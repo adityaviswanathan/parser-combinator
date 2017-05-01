@@ -1,4 +1,4 @@
-name := "parser-combinators-tutorial"
+name := "parser-combinators"
 
 version := "1.0"
 

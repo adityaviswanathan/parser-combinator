@@ -44,11 +44,6 @@ object WorkflowParser extends Parsers {
     val switch = SWITCH() ~ COLON() ~ INDENT() ~ rep1(ifThen) ~ opt(otherwiseThen) ~ DEDENT() ^^ {
       case _ ~ _ ~ _ ~ ifs ~ otherwise ~ _ => Choice(ifs ++ otherwise)
     }
-    // val declareProperty = 
-    //   (identifier ~ EQUAL() ~ PROPERTY() ~ OPENBLOCK() ~ INDENT() ~ 
-    //   rep(attribute ~ COMMA()) ~ attribute ~ DEDENT() ~ CLOSEBLOCK()) ^^ {
-    //     case IDENTIFIER(name) ~ _ ~ _ ~ _ ~ _ ~ attrs ~ lastAttribute ~ _ ~ _ => Property(name, attrs.map(_._1) ++ List(lastAttribute)) 
-    // }
 
     val declare = (identifier ~ EQUAL() ~ value) ^^ { 
       case IDENTIFIER(id) ~ eq ~ value => Variable(id, value) 

@@ -33,9 +33,6 @@ case class CLOSEARRAY() extends WorkflowToken
 // VARIABLE ASSIGNMENT
 case class EQUAL() extends WorkflowToken
 
-// INSTANCE PROPERTY ASSIGNMENT
-// case class COLON() extends WorkflowToken
-
 // LANGUAGE KEYWORDS (CONSTRUCTORS)
 case class CONSTRUCTOR() extends WorkflowToken
 case class PAGE() extends WorkflowToken
