@@ -1,0 +1,9 @@
+/RUNNING_PID
+/logs/
+/project/*-shim.sbt
+/project/project/
+/project/target/
+/target/
+*.class
+.DS_Store
+_DS_Store
