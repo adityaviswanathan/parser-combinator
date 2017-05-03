@@ -30,6 +30,7 @@ object WorkflowParser extends Parsers {
   }
 
   def block: Parser[WorkflowAST] = positioned {
+    // rep1(statement) ^^ { case varList => Declarations(varList) }
     rep1(statement) ^^ { case stmtList => stmtList reduceRight AndThen }
   }
 

@@ -16,6 +16,9 @@ case class OtherwiseThen(thenBlock: WorkflowAST) extends ConditionThen
 sealed trait Condition extends Positional
 case class Equals(factName: String, factValue: String) extends Condition
 
+// BEGIN LANGUAGE DEFINITION
+// case class Declarations(variables: Seq[WorkflowAST]) extends WorkflowAST
+
 sealed trait Attribute extends Positional
 case class AttributeToValue(attrName: String, attrValue: Value) extends Attribute
 case class AttributeToList(attrName: String, attrValue: Seq[Value]) extends Attribute
