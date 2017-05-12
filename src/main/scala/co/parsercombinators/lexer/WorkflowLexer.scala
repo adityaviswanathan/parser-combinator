@@ -147,18 +147,18 @@ object WorkflowLexer extends RegexParsers {
   def openArray     = positioned { "["             ^^ (_ => OPENARRAY()) }
   def closeArray    = positioned { "]"             ^^ (_ => CLOSEARRAY()) }
 
-  def page          = positioned { "Page"          ^^ (_ => PAGE()) }
-  def template      = positioned { "Template"      ^^ (_ => TEMPLATE()) }
-  def component     = positioned { "Component"     ^^ (_ => COMPONENT()) }
-  def event         = positioned { "Event"         ^^ (_ => EVENT()) }
-  def listener      = positioned { "Listener"      ^^ (_ => LISTENER()) }
-  def filter        = positioned { "Filter"        ^^ (_ => FILTER()) }
-  def connective    = positioned { "Connective"    ^^ (_ => CONNECTIVE()) }
-  def expression    = positioned { "Expression"    ^^ (_ => EXPRESSION()) }
-  def arg           = positioned { "Arg"           ^^ (_ => ARG()) }
-  def referenceArg  = positioned { "ReferenceArg"  ^^ (_ => REFERENCEARG()) }
-  def primitiveArg  = positioned { "PrimitiveArg"  ^^ (_ => PRIMITIVEARG()) }
-  def entity        = positioned { "Entity"        ^^ (_ => ENTITY()) }
-  def property      = positioned { "Property"      ^^ (_ => PROPERTY()) }
+  def page          = positioned { "PAGE"          ^^ (_ => PAGE()) }
+  def template      = positioned { "TEMPLATE"      ^^ (_ => TEMPLATE()) }
+  def component     = positioned { "COMPONENT"     ^^ (_ => COMPONENT()) }
+  def event         = positioned { "EVENT"         ^^ (_ => EVENT()) }
+  def listener      = positioned { "LISTENER"      ^^ (_ => LISTENER()) }
+  def filter        = positioned { "FILTER"        ^^ (_ => FILTER()) }
+  def connective    = positioned { "CONNECTIVE"    ^^ (_ => CONNECTIVE()) }
+  def expression    = positioned { "EXPRESSION"    ^^ (_ => EXPRESSION()) }
+  def arg           = positioned { "ARG"           ^^ (_ => ARG()) }
+  def referenceArg  = positioned { "REFERENCEARG"  ^^ (_ => REFERENCEARG()) }
+  def primitiveArg  = positioned { "PRIMITIVEARG"  ^^ (_ => PRIMITIVEARG()) }
+  def entity        = positioned { "ENTITY"        ^^ (_ => ENTITY()) }
+  def property      = positioned { "PROPERTY"      ^^ (_ => PROPERTY()) }
 
 }

@@ -1,108 +1,172 @@
 package co.parsercombinators.runtime
 
 import scala.util.parsing.input.Positional
-import co.parsercombinators.compiler.{WorkflowCompilationError}
 import co.parsercombinators.lexer.WorkflowLexer
-import co.parsercombinators.compiler.WorkflowCompiler
+import co.parsercombinators.compiler.{Location, WorkflowError, WorkflowRuntimeError, WorkflowCompiler}
 import co.parsercombinators.parser._
 
 import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 import scala.collection.mutable.{Map}
 
 object WorkflowRuntime {
 
-	def traverseAST(root: Positional, env: Map[String, Value], envKey: Option[String]): Map[String, Value] = {
-		root match {
+	val registerErr: String = "no legal name in register found"
+	val constructorErr: String = "illegal type found for attribute "
 
-			case Variable(key, value) => {
-				return traverseAST(value, env, Some(key))
+	def lookupEnv(root: Positional, env: Map[String, Value], register: Option[String]): Either[WorkflowRuntimeError, Value] = {
+		register match {
+			case Some(keyToUse) => {
+				if(!env.contains(keyToUse)) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), "could not find variable " + keyToUse)) 
+				return Right(env(keyToUse))
 			}
-
-			case StringValue(value) => { 
-				envKey match {
-					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-					case None => println("ERROR IN STRING!")
-				}
-				return env
-			}
-			case EnumValue(value) => { 
-				envKey match {
-					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-					case None => println("ERROR IN STRING!")
-				}
-				return env
-			}
-			case ConstructorValue(value) => { 
-				value match {
-					case Property(attrs) => {
-						println("IN PROPS BLOCK")
-						for(attr <- attrs) {
-							println(attr)
-						}
-					}
-				}
-
-				envKey match {
-					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-					case None => println("ERROR IN CONSTRUCTOR!")
-				}
-				return env
-
-			}
-			case VariableValue(value) => { 
-				envKey match {
-					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-					case None => println("ERROR IN VARIABLE!")
-				}
-				return env
-			}
-
-			case AndThen(step1,step2) => {
-				val newEnv: Map[String, Value] = traverseAST(step1, env, None)
-				return traverseAST(step2, newEnv, None)
-			}
-
+			case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), "no legal lvalue supplied")) 
 		}
 	}
 
-	// def apply(code: String) = {
-	def apply() = {
-		// val ast = WorkflowCompiler(code)
-		
-		val multiSimpleDeclare = 
-		    """
-		      |dummy = "newString"
-		      |dummy2 = dummy
-		      |dummy3 = ENUM.COMPONENT.STATIC
-		      |dummy4 = Property( 
-		      |  Name : "PropName",
-		      |  AnotherProp: [dummy, dummy2] 
-		      |)
-		    """.stripMargin.trim
-		WorkflowCompiler(multiSimpleDeclare) match { 
-			case Left(msg: WorkflowCompilationError) => {
-				println(msg)
+	def interpret(root: Positional, env: Map[String, Value], register: Option[String]): Either[WorkflowRuntimeError, Map[String, Value]] = {
+		root match {
+			case AndThen(step1,step2) => {
+				var newEnv = Map[String, Value]()
+				interpret(step1, env, None) match {
+					case Left(err) => return Left(err)
+					case Right(env) => newEnv = env
+				}
+				return interpret(step2, newEnv, None)
 			}
-			case Right(root: WorkflowAST) => {
-				println(traverseAST(root, Map[String, Value](), None))
+			case Variable(key, value) => {
+				return interpret(value, env, Some(key))
+			}
+
+			case StringValue(value) => { 
+				register match {
+					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+				}
+				return Right(env)
+			}
+
+			case EnumValue(value) => { 
+				register match {
+					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+				}
+				return Right(env)
+			}
+
+			case VariableValue(value) => { 
+				lookupEnv(root, env, Some(value)) match {
+					case Left(err) => { 
+						return Left(err)
+					}
+					case Right(value) => { 
+						register match {
+							case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
+							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+						}
+					}
+				}
+				return Right(env)
+			}
+
+			case ConstructorValue(value) => { 
+				register match {
+					case Some(keyToUse) => {
+						env(keyToUse) = root.asInstanceOf[Value]
+						value match {
+							case Property(attrs) => {
+								for(attr <- attrs) {
+									interpret(attr, env, Some(keyToUse)) match {
+										case Left(err) => return Left(err)
+										case _ => {}
+									}
+								}
+							}
+						}
+					}
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+				}	
+				return Right(env)
+
+			}
+
+			case AttributeToValue(key, value) => {
+				val toMatch = Map[String, Any](
+					"Name" 		-> StringValue,
+					"Entity"	-> EnumValue
+				)
+
+				var found = Set[String]()				
+
+				register match {
+					case Some(keyToUse) => {
+						found += key
+						if(toMatch.contains(key)) {
+							val typeName = toMatch(key)
+
+							// THE CODE BELOW IS A TEMPORARY HACK TO GET AROUND 
+							// COMPARING THE RUNTIME TYPE OF A VARIABLE TO A 
+							// HASHED-TO 'ANY' TYPE. EVENTUALLY THIS WILL NEED 
+							// TO BE FIXED BUT WE PROCEED FOR NOW TO GET TO AN 
+							// E2E SYSTEM ASAP
+
+							if(workAround(value.toString, typeName.toString)) {
+								return Right(env)
+							} else {
+								return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorErr + key))
+							}
+
+							// TODO: fix the below:
+							// capture runtime type of variable and compare with expected type
+							// currently running into issues getting this transformation done: 
+							// StringValue("hello") -> StringValue
+
+							// value match {
+							// 	case `typeName` => {
+							// 		println("YAY HERE YAY :)")
+							// 	}
+							// 	case _ => {
+									
+							// 		println("HIT HERE AGAIN :(")
+							// 		return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorErr + key))
+							// 	}
+							// }
+						} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorErr + key))
+					}
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+				}
+				return Right(env)
 			}
 		}
+	}
 
-		object traverser extends Traverser {
-        	var applies = List[Apply]()
-        	override def traverse(tree: Tree): Unit = tree match {
-          		case app @ Apply(fun, args) =>
-	            	applies = app :: applies
-	            	super.traverse(fun)
-	            	super.traverseTrees(args)
-          		case _ => super.traverse(tree)
-        	}
-       	}
+	// THIS DIDN'T WORK
+	def getTypeTag[T: ru.TypeTag](obj: T) = ru.typeTag[T]
 
-       	// traverser.traverse(ast)
-       	// println(traverser.applies)
+	def workAround(foundValue: String, valueToMatch: String): Boolean = {
+		val valueType = foundValue
+		val foundTypeNameWithArgs = valueType.split('(')
+		val foundTypeName: String = foundTypeNameWithArgs(0)
+		if(foundTypeName == valueToMatch) return true
+		return false
+	}
 
-       	/*
+	def apply(code: String): Either[WorkflowError, Map[String, Value]] = {
+		WorkflowCompiler(code) match { 
+			case Left(msg: WorkflowError) => {
+				return Left(msg)
+			}
+			case Right(root: WorkflowAST) => {
+				// CORE FUNCTIONALITY (SURROUNDING CODE IS REALLY COMPILER STUFF)
+				interpret(root, Map[String, Value](), None) match {
+					case Left(err) => return Left(err)
+					case Right(env) => return Right(env)
+				}
+			}
+		}
+	}
+
+	/*
        	 CODE GEN ROUGH STEPS (version A - COMPILED)
        	 Assume AST format is simple list of variable declarations
        	 Requires 'app' declaration (entrypoint for "code generation")
@@ -139,5 +203,4 @@ object WorkflowRuntime {
        	 	=> O(N)
 
        	*/
-	}
 }

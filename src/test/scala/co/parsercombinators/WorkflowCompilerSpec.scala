@@ -3,6 +3,7 @@ package co.parsercombinators
 import co.parsercombinators.compiler.{Location, WorkflowCompiler, WorkflowParserError}
 import co.parsercombinators.parser._
 import org.scalatest.{FlatSpec, Matchers}
+import co.parsercombinators.runtime.WorkflowRuntime
 
 class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
@@ -20,12 +21,12 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
   val multiConstructorDeclare = 
     """
-      |dummy = Property(
+      |dummy = PROPERTY(
       |  Name : "NewProperty",
       |  Enum : ENUM.ELEMENT.HEADER
       |)
-      |dummy2 = Entity(
-      |  Props : [dummy, Property(
+      |dummy2 = ENTITY(
+      |  Props : [dummy, PROPERTY(
       |    Name : "SecondProperty",
       |    Enum : ENUM.ELEMENT.INPUT
       |  )],
@@ -35,7 +36,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
   val multiTypeDeclare = 
     """
-      |dummy = Property(
+      |dummy = PROPERTY(
       |  Name : "NewProperty",
       |  Enum : ENUM.COMPONENT.STATIC,
       |  Var : SomeVariable
@@ -44,10 +45,10 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
   val nestedDeclare = 
     """
-      |dummy = Property(
+      |dummy = PROPERTY(
       |  Name : "NewProperty",
       |  Enum : ENUM.COMPONENT.STATIC,
-      |  Var : Property(
+      |  Var : PROPERTY(
       |    Name : "NestedProperty",
       |    Enum : ENUM.COMPONENT.STATIC
       |  )
@@ -56,18 +57,31 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
   val doublyNestedDeclare = 
     """
-      |dummy = Property(
+      |dummy = PROPERTY(
       |  Name : "NewProperty",
       |  Enum : ENUM.COMPONENT.STATIC,
-      |  Var : Property(
+      |  Var : PROPERTY(
       |    Name : "NestedProperty",
       |    Enum : ENUM.COMPONENT.STATIC,
-      |    Var : Property(
+      |    Var : PROPERTY(
       |      Name : "DoublyNestedProperty",
       |      Enum : ENUM.COMPONENT.STATIC
       |    )
       |  )
       |)
+    """.stripMargin.trim
+
+  val simpleRuntime = 
+    """
+      |dummy = "newString"
+      |dummy = "tester"
+      |dummy2 = dummy
+      |dummy3 = ENUM.COMPONENT.STATIC
+      |dummy4 = PROPERTY( 
+      |  Name : "PropName",
+      |  Entity : ENUM.COMPONENT.STATIC
+      |)
+      |dummy2 = dummy4
     """.stripMargin.trim
 
   val validCode =
@@ -102,23 +116,6 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |      otherwise ->
       |        call service "C"
       |        exit
-    """.stripMargin.trim
-
-    val newCode = 
-    """
-      |Completed = Property {
-      |  AppType : Enums.AppType.BOOL,
-      |  Entity : Todo,
-      |  Name : "Completed",
-      |}
-      |Todo = Entity {
-      |  Properties : [Property {
-      |    AppType : Enums.AppType.STRING,
-      |    Entity : Todo,
-      |    Name : "Payload",
-      |  }, Completed],
-      |  Name : "Todo"
-      |}
     """.stripMargin.trim
 
   val successfulAST = AndThen(
@@ -208,6 +205,16 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       )
     )
   ))
+  val simpleRuntimeMap = Map(
+    "dummy4" -> ConstructorValue(Property(
+      List(
+        AttributeToValue("Name",StringValue("PropName")), 
+        AttributeToValue("Entity",EnumValue(Enum("ComponentType", "STATIC")))
+      ))), 
+    "dummy" -> StringValue("tester"), 
+    "dummy3" -> EnumValue(Enum("ComponentType","STATIC")), 
+    "dummy2" -> VariableValue("dummy4")
+  )
 
   "Workflow compiler" should "successfully parse a simple variable declaration" in {
     WorkflowCompiler(simpleDeclare) shouldBe Right(simpleAST)
@@ -233,8 +240,12 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     WorkflowCompiler(doublyNestedDeclare) shouldBe Right(doublyNestedAST)
   }
 
-  // it should "return an error with an invalid workflow" in {
-  //   WorkflowCompiler(invalidCode) shouldBe Left(errorMsg)
-  // }
+  it should "return an error with an invalid workflow" in {
+    WorkflowCompiler(invalidCode) shouldBe Left(errorMsg)
+  }
+
+  it should "create a simple runtime environment from variable declarations" in {
+    WorkflowRuntime(simpleRuntime) shouldBe Right(simpleRuntimeMap)
+  }
 
 }
