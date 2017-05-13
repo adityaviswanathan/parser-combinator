@@ -8,11 +8,14 @@ import co.parsercombinators.parser._
 import scala.reflect.runtime.universe._
 import scala.reflect.runtime.{universe => ru}
 import scala.collection.mutable.{Map}
+import util.control.Breaks._
 
 object WorkflowRuntime {
 
 	val registerErr: String = "no legal name in register found"
-	val constructorErr: String = "illegal type found for attribute "
+	val attributeErr: String = "no such attribute exists for specified constructor with name "
+	val attributeTypeErr: String = "illegal type found for attribute "
+	val variableErr: String = "no variable found with name "
 
 	def lookupEnv(root: Positional, env: Map[String, Value], register: Option[String]): Either[WorkflowRuntimeError, Value] = {
 		register match {
@@ -24,18 +27,18 @@ object WorkflowRuntime {
 		}
 	}
 
-	def interpret(root: Positional, env: Map[String, Value], register: Option[String]): Either[WorkflowRuntimeError, Map[String, Value]] = {
+	def interpret(root: Positional, env: Map[String, Value], register: Option[String], attrTypeChecker: Option[Map[String, Any]]): Either[WorkflowRuntimeError, Map[String, Value]] = {
 		root match {
 			case AndThen(step1,step2) => {
 				var newEnv = Map[String, Value]()
-				interpret(step1, env, None) match {
+				interpret(step1, env, None, None) match {
 					case Left(err) => return Left(err)
 					case Right(env) => newEnv = env
 				}
-				return interpret(step2, newEnv, None)
+				return interpret(step2, newEnv, None, None)
 			}
 			case Variable(key, value) => {
-				return interpret(value, env, Some(key))
+				return interpret(value, env, Some(key), None)
 			}
 
 			case StringValue(value) => { 
@@ -76,7 +79,12 @@ object WorkflowRuntime {
 						value match {
 							case Property(attrs) => {
 								for(attr <- attrs) {
-									interpret(attr, env, Some(keyToUse)) match {
+									val toMatch = Map[String, Any](
+										"Name" 		-> classOf[StringValue],
+										"Entity"	-> classOf[EnumValue]
+									)
+
+									interpret(attr, env, Some(keyToUse), Some(toMatch)) match {
 										case Left(err) => return Left(err)
 										case _ => {}
 									}
@@ -90,65 +98,49 @@ object WorkflowRuntime {
 
 			}
 
+			// TODO:
+			// 1. check constructor attribute types (need to unwrap ConstructorValue and check actual constructor)
+			// 2. check that all attributes are satisfied (not just that each presented one is correctly typed)
 			case AttributeToValue(key, value) => {
-				val toMatch = Map[String, Any](
-					"Name" 		-> StringValue,
-					"Entity"	-> EnumValue
-				)
 
-				var found = Set[String]()				
+				attrTypeChecker match {
+					case Some(typeChecker) => {
+						var found = Set[String]()				
+						register match {
+							case Some(keyToUse) => {
+								found += key
+								if(typeChecker.contains(key)) {
+									val typeName = typeChecker(key)
+									var resolved: Value = value
 
-				register match {
-					case Some(keyToUse) => {
-						found += key
-						if(toMatch.contains(key)) {
-							val typeName = toMatch(key)
+									breakable {
+										while(true) {
+									        resolved match {
+												case VariableValue(varName) => {
+													if(env.contains(varName)) {
+														resolved = env(varName)
+													} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), variableErr + varName))
+												}
+												case _ => { break }
+											}
+										}
+									}
 
-							// THE CODE BELOW IS A TEMPORARY HACK TO GET AROUND 
-							// COMPARING THE RUNTIME TYPE OF A VARIABLE TO A 
-							// HASHED-TO 'ANY' TYPE. EVENTUALLY THIS WILL NEED 
-							// TO BE FIXED BUT WE PROCEED FOR NOW TO GET TO AN 
-							// E2E SYSTEM ASAP
-
-							if(workAround(value.toString, typeName.toString)) {
-								return Right(env)
-							} else {
-								return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorErr + key))
+									resolved.getClass match {
+										case `typeName` => return Right(env)
+										case _ => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
+									}
+								} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeErr + key))
 							}
-
-							// TODO: fix the below:
-							// capture runtime type of variable and compare with expected type
-							// currently running into issues getting this transformation done: 
-							// StringValue("hello") -> StringValue
-
-							// value match {
-							// 	case `typeName` => {
-							// 		println("YAY HERE YAY :)")
-							// 	}
-							// 	case _ => {
-									
-							// 		println("HIT HERE AGAIN :(")
-							// 		return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorErr + key))
-							// 	}
-							// }
-						} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorErr + key))
+							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+						}
+						return Right(env)
 					}
 					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
 				}
-				return Right(env)
+				
 			}
 		}
-	}
-
-	// THIS DIDN'T WORK
-	def getTypeTag[T: ru.TypeTag](obj: T) = ru.typeTag[T]
-
-	def workAround(foundValue: String, valueToMatch: String): Boolean = {
-		val valueType = foundValue
-		val foundTypeNameWithArgs = valueType.split('(')
-		val foundTypeName: String = foundTypeNameWithArgs(0)
-		if(foundTypeName == valueToMatch) return true
-		return false
 	}
 
 	def apply(code: String): Either[WorkflowError, Map[String, Value]] = {
@@ -158,7 +150,7 @@ object WorkflowRuntime {
 			}
 			case Right(root: WorkflowAST) => {
 				// CORE FUNCTIONALITY (SURROUNDING CODE IS REALLY COMPILER STUFF)
-				interpret(root, Map[String, Value](), None) match {
+				interpret(root, Map[String, Value](), None, None) match {
 					case Left(err) => return Left(err)
 					case Right(env) => return Right(env)
 				}

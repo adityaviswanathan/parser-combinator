@@ -78,7 +78,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |dummy2 = dummy
       |dummy3 = ENUM.COMPONENT.STATIC
       |dummy4 = PROPERTY( 
-      |  Name : "PropName",
+      |  Name : dummy2,
       |  Entity : ENUM.COMPONENT.STATIC
       |)
       |dummy2 = dummy4
@@ -208,7 +208,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
   val simpleRuntimeMap = Map(
     "dummy4" -> ConstructorValue(Property(
       List(
-        AttributeToValue("Name",StringValue("PropName")), 
+        AttributeToValue("Name",VariableValue("dummy2")), 
         AttributeToValue("Entity",EnumValue(Enum("ComponentType", "STATIC")))
       ))), 
     "dummy" -> StringValue("tester"), 
