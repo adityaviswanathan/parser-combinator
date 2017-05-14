@@ -77,9 +77,14 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |dummy = "tester"
       |dummy2 = dummy
       |dummy3 = ENUM.COMPONENT.STATIC
+      |ent = ENTITY(
+      |  Name : dummy
+      |)
       |dummy4 = PROPERTY( 
       |  Name : dummy2,
-      |  Entity : ENUM.COMPONENT.STATIC
+      |  Entity : ENTITY(
+      |    Name : dummy
+      |  )
       |)
       |dummy2 = dummy4
     """.stripMargin.trim
@@ -209,9 +214,10 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     "dummy4" -> ConstructorValue(Property(
       List(
         AttributeToValue("Name",VariableValue("dummy2")), 
-        AttributeToValue("Entity",EnumValue(Enum("ComponentType", "STATIC")))
+        AttributeToValue("Entity",ConstructorValue(Entity(List(AttributeToValue("Name",VariableValue("dummy"))))))
       ))), 
     "dummy" -> StringValue("tester"), 
+    "ent" -> ConstructorValue(Entity(List(AttributeToValue("Name",VariableValue("dummy"))))), 
     "dummy3" -> EnumValue(Enum("ComponentType","STATIC")), 
     "dummy2" -> VariableValue("dummy4")
   )

@@ -5,8 +5,6 @@ import co.parsercombinators.lexer.WorkflowLexer
 import co.parsercombinators.compiler.{Location, WorkflowError, WorkflowRuntimeError, WorkflowCompiler}
 import co.parsercombinators.parser._
 
-import scala.reflect.runtime.universe._
-import scala.reflect.runtime.{universe => ru}
 import scala.collection.mutable.{Map}
 import util.control.Breaks._
 
@@ -79,12 +77,19 @@ object WorkflowRuntime {
 						value match {
 							case Property(attrs) => {
 								for(attr <- attrs) {
-									val toMatch = Map[String, Any](
-										"Name" 		-> classOf[StringValue],
-										"Entity"	-> classOf[EnumValue]
-									)
-
-									interpret(attr, env, Some(keyToUse), Some(toMatch)) match {
+									
+									val mm = collection.mutable.Map[String, Any]() ++= WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
+									interpret(attr, env, Some(keyToUse), Some(mm)) match {
+										case Left(err) => return Left(err)
+										case _ => {}
+									}
+								}
+							}
+							case Entity(attrs) => {
+								for(attr <- attrs) {
+									
+									val mm = collection.mutable.Map[String, Any]() ++= WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
+									interpret(attr, env, Some(keyToUse), Some(mm)) match {
 										case Left(err) => return Left(err)
 										case _ => {}
 									}
@@ -99,8 +104,8 @@ object WorkflowRuntime {
 			}
 
 			// TODO:
-			// 1. check constructor attribute types (need to unwrap ConstructorValue and check actual constructor)
 			// 2. check that all attributes are satisfied (not just that each presented one is correctly typed)
+			// 3. check list types properly - write a case for AttributeToList
 			case AttributeToValue(key, value) => {
 
 				attrTypeChecker match {
@@ -120,6 +125,12 @@ object WorkflowRuntime {
 													if(env.contains(varName)) {
 														resolved = env(varName)
 													} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), variableErr + varName))
+												}
+												case ConstructorValue(constructed) => {
+													constructed.getClass match {
+														case `typeName` => return Right(env)
+														case _ => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
+													} 
 												}
 												case _ => { break }
 											}
