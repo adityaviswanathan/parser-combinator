@@ -82,11 +82,28 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |)
       |dummy4 = PROPERTY( 
       |  Name : dummy2,
-      |  Entity : ENTITY(
-      |    Name : dummy
-      |  )
+      |  Entity : ent
       |)
       |dummy2 = dummy4
+    """.stripMargin.trim
+
+  val complexAttributeRuntime = 
+    """
+      |dummy = "val"
+      |dummy2 = "val2"
+      |prop = PROPERTY( 
+      |  Name : dummy2
+      |)
+      |ent = ENTITY(
+      |  Name : dummy,
+      |  Properties : [PROPERTY( 
+      |    Name : dummy
+      |  ), prop]
+      |)
+      |dummy4 = PROPERTY( 
+      |  Name : dummy2,
+      |  Entity : ent
+      |)
     """.stripMargin.trim
 
   val validCode =
@@ -214,12 +231,37 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     "dummy4" -> ConstructorValue(Property(
       List(
         AttributeToValue("Name",VariableValue("dummy2")), 
-        AttributeToValue("Entity",ConstructorValue(Entity(List(AttributeToValue("Name",VariableValue("dummy"))))))
+        AttributeToValue("Entity",VariableValue("ent"))
       ))), 
     "dummy" -> StringValue("tester"), 
     "ent" -> ConstructorValue(Entity(List(AttributeToValue("Name",VariableValue("dummy"))))), 
     "dummy3" -> EnumValue(Enum("ComponentType","STATIC")), 
     "dummy2" -> VariableValue("dummy4")
+  )
+
+  val complexAttributeRuntimeMap = Map(
+    "dummy" -> StringValue("val"),
+    "dummy2" -> StringValue("val2"),
+    "prop" -> ConstructorValue(Property(
+      List(
+        AttributeToValue("Name",VariableValue("dummy2"))
+      ))),
+    "ent" -> ConstructorValue(Entity(
+      List(
+        AttributeToValue("Name",VariableValue("dummy")),
+        AttributeToList("Properties",List(
+          ConstructorValue(Property(
+            List(
+              AttributeToValue("Name",VariableValue("dummy"))
+            ))),
+          VariableValue("prop")
+        ))
+      ))), 
+    "dummy4" -> ConstructorValue(Property(
+      List(
+        AttributeToValue("Name",VariableValue("dummy2")),
+        AttributeToValue("Entity",VariableValue("ent"))
+      )))
   )
 
   "Workflow compiler" should "successfully parse a simple variable declaration" in {
@@ -252,6 +294,10 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
   it should "create a simple runtime environment from variable declarations" in {
     WorkflowRuntime(simpleRuntime) shouldBe Right(simpleRuntimeMap)
+  }
+
+  it should "create a complex attribute runtime environment with lists and combined inline/variable declarations" in {
+    WorkflowRuntime(complexAttributeRuntime) shouldBe Right(complexAttributeRuntimeMap)
   }
 
 }

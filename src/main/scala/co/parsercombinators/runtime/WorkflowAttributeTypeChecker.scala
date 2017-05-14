@@ -18,7 +18,7 @@ object WorkflowAttributeTypeChecker {
 			"Name"			-> classOf[StringValue]
 		),
 		"Entity" 	-> Map[String, Any](
-			// "Properties"	-> classOf[EnumValue],
+			"Properties"	-> classOf[Property],
 			"Name"			-> classOf[StringValue]
 		)
 	)	

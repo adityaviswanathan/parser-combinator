@@ -103,54 +103,72 @@ object WorkflowRuntime {
 
 			}
 
-			// TODO:
-			// 2. check that all attributes are satisfied (not just that each presented one is correctly typed)
-			// 3. check list types properly - write a case for AttributeToList
-			case AttributeToValue(key, value) => {
+			case AttributeToList(key, values) => { 
+				var index = 0
 
-				attrTypeChecker match {
-					case Some(typeChecker) => {
-						var found = Set[String]()				
-						register match {
-							case Some(keyToUse) => {
-								found += key
-								if(typeChecker.contains(key)) {
-									val typeName = typeChecker(key)
-									var resolved: Value = value
-
-									breakable {
-										while(true) {
-									        resolved match {
-												case VariableValue(varName) => {
-													if(env.contains(varName)) {
-														resolved = env(varName)
-													} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), variableErr + varName))
-												}
-												case ConstructorValue(constructed) => {
-													constructed.getClass match {
-														case `typeName` => return Right(env)
-														case _ => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
-													} 
-												}
-												case _ => { break }
-											}
-										}
-									}
-
-									resolved.getClass match {
-										case `typeName` => return Right(env)
-										case _ => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
-									}
-								} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeErr + key))
-							}
-							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
-						}
-						return Right(env)
+				for(value <- values) {
+					checkAttribute(key, value, root, env, register, attrTypeChecker) match {
+						case Some(err) => return Left(err)
+						case None => index += 1
 					}
-					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
 				}
+
+				return Right(env)
 				
 			}
+
+			// TODO:
+			// 2. check that all attributes are satisfied (not just that each presented one is correctly typed)
+			case AttributeToValue(key, value) => {
+				checkAttribute(key, value, root, env, register, attrTypeChecker) match {
+					case Some(err) => return Left(err)
+					case None => return Right(env)
+				}
+				return Right(env)
+
+			}
+		}
+	}
+
+	def checkAttribute(key: String, value: Value, root: Positional, env: Map[String, Value], register: Option[String], attrTypeChecker: Option[Map[String, Any]]): Option[WorkflowRuntimeError] = {
+		attrTypeChecker match {
+			case Some(typeChecker) => {			
+				register match {
+					case Some(keyToUse) => {
+						if(typeChecker.contains(key)) {
+							val typeName = typeChecker(key)
+							var resolved: Value = value
+
+							breakable {
+								while(true) {
+							        resolved match {
+										case VariableValue(varName) => {
+											if(env.contains(varName)) {
+												resolved = env(varName)
+											} else return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), variableErr + varName))
+										}
+										case ConstructorValue(constructed) => {
+											constructed.getClass match {
+												case `typeName` => return None
+												case _ => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
+											} 
+										}
+										case _ => break
+									}
+								}
+							}
+
+							resolved.getClass match {
+								case `typeName` => return None
+								case _ => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
+							}
+						} else return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeErr + key))
+					}
+					case None => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+				}
+				return None
+			}
+			case None => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
 		}
 	}
 
