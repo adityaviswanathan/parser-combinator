@@ -74,27 +74,9 @@ object WorkflowRuntime {
 				register match {
 					case Some(keyToUse) => {
 						env(keyToUse) = root.asInstanceOf[Value]
-						value match {
-							case Property(attrs) => {
-								for(attr <- attrs) {
-									
-									val mm = collection.mutable.Map[String, Any]() ++= WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
-									interpret(attr, env, Some(keyToUse), Some(mm)) match {
-										case Left(err) => return Left(err)
-										case _ => {}
-									}
-								}
-							}
-							case Entity(attrs) => {
-								for(attr <- attrs) {
-									
-									val mm = collection.mutable.Map[String, Any]() ++= WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
-									interpret(attr, env, Some(keyToUse), Some(mm)) match {
-										case Left(err) => return Left(err)
-										case _ => {}
-									}
-								}
-							}
+						checkConstructor(value, env, keyToUse) match {
+							case Some(err) => return Left(err)
+							case None => {}
 						}
 					}
 					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
@@ -104,6 +86,7 @@ object WorkflowRuntime {
 			}
 
 			case AttributeToList(key, values) => { 
+				// TODO: pass index into checkAttribute and print out in error
 				var index = 0
 
 				for(value <- values) {
@@ -128,6 +111,36 @@ object WorkflowRuntime {
 
 			}
 		}
+	}
+
+	def loopAttributes(attrs: Seq[Attribute], value: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
+		for(attr <- attrs) {
+			val mm = collection.mutable.Map[String, Any]() ++= WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
+			interpret(attr, env, Some(keyToUse), Some(mm)) match {
+				case Left(err) => return Some(err)
+				case _ => {}
+			}
+		}
+		return None
+	}
+
+	def checkConstructor(value: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
+		value match {
+			case Page(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Template(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Component(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Event(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Listener(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Filter(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Connective(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Expression(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Arg(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case ReferenceArg(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case PrimitiveArg(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Property(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+			case Entity(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+		}
+		return None
 	}
 
 	def checkAttribute(key: String, value: Value, root: Positional, env: Map[String, Value], register: Option[String], attrTypeChecker: Option[Map[String, Any]]): Option[WorkflowRuntimeError] = {

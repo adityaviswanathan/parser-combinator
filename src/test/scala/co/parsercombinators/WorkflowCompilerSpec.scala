@@ -81,8 +81,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |  Name : dummy
       |)
       |dummy4 = PROPERTY( 
-      |  Name : dummy2,
-      |  Entity : ent
+      |  Name : dummy2
       |)
       |dummy2 = dummy4
     """.stripMargin.trim
@@ -101,8 +100,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |  ), prop]
       |)
       |dummy4 = PROPERTY( 
-      |  Name : dummy2,
-      |  Entity : ent
+      |  Name : dummy2
       |)
     """.stripMargin.trim
 
@@ -230,8 +228,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
   val simpleRuntimeMap = Map(
     "dummy4" -> ConstructorValue(Property(
       List(
-        AttributeToValue("Name",VariableValue("dummy2")), 
-        AttributeToValue("Entity",VariableValue("ent"))
+        AttributeToValue("Name",VariableValue("dummy2"))
       ))), 
     "dummy" -> StringValue("tester"), 
     "ent" -> ConstructorValue(Entity(List(AttributeToValue("Name",VariableValue("dummy"))))), 
@@ -259,8 +256,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       ))), 
     "dummy4" -> ConstructorValue(Property(
       List(
-        AttributeToValue("Name",VariableValue("dummy2")),
-        AttributeToValue("Entity",VariableValue("ent"))
+        AttributeToValue("Name",VariableValue("dummy2"))
       )))
   )
 

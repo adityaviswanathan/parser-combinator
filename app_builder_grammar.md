@@ -190,5 +190,4 @@ Home = Page
 
 ### `Property` properties
 - AppType (n = 1): `AppType`
-- Entity (n = 1): `Entity`
 - Name (n = 1): `String`
