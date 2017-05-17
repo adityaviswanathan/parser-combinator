@@ -6,7 +6,7 @@ Currently `master` houses support for a basic language that supports conditional
 On the roadmap:
 
 - Design and implement a runtime
-    - Environment variables and context
+    - ~~Environment variables and context~~
     - Validate constructors and attributes (potentially can be treated as closures)
     - Evaluation build around root `App` AST node
 - Flexible code generation
