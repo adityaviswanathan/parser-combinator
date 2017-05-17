@@ -1,7 +1,7 @@
-package co.parsercombinators.compiler
+package co.language.compiler
 
-import co.parsercombinators.lexer.WorkflowLexer
-import co.parsercombinators.parser.{WorkflowParser, WorkflowAST}
+import co.language.lexer.WorkflowLexer
+import co.language.parser.{WorkflowParser, WorkflowAST}
 
 object WorkflowCompiler {
   def apply(code: String): Either[WorkflowError, WorkflowAST] = {

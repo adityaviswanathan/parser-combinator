@@ -1,4 +1,4 @@
-package co.parsercombinators.compiler
+package co.language.compiler
 
 sealed trait WorkflowError
 

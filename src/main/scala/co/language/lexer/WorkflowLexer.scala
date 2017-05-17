@@ -1,6 +1,6 @@
-package co.parsercombinators.lexer
+package co.language.lexer
 
-import co.parsercombinators.compiler.{Location, WorkflowLexerError}
+import co.language.compiler.{Location, WorkflowLexerError}
 
 import scala.util.parsing.combinator.RegexParsers
 

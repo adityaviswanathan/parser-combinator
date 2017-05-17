@@ -1,4 +1,4 @@
-package co.parsercombinators.parser
+package co.language.parser
 
 import scala.util.parsing.input.Positional
 

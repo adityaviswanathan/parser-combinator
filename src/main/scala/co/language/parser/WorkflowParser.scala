@@ -1,7 +1,7 @@
-package co.parsercombinators.parser
+package co.language.parser
 
-import co.parsercombinators.compiler.{Location, WorkflowParserError}
-import co.parsercombinators.lexer._
+import co.language.compiler.{Location, WorkflowParserError}
+import co.language.lexer._
 
 import scala.util.parsing.combinator.Parsers
 import scala.util.parsing.input.{NoPosition, Position, Reader}

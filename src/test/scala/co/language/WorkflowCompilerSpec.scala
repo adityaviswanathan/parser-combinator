@@ -1,9 +1,9 @@
-package co.parsercombinators
+package co.language
 
-import co.parsercombinators.compiler.{Location, WorkflowCompiler, WorkflowParserError}
-import co.parsercombinators.parser._
+import co.language.compiler.{Location, WorkflowCompiler, WorkflowParserError}
+import co.language.parser._
 import org.scalatest.{FlatSpec, Matchers}
-import co.parsercombinators.runtime.WorkflowRuntime
+import co.language.runtime.WorkflowRuntime
 
 class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
@@ -292,7 +292,7 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     WorkflowRuntime(simpleRuntime) shouldBe Right(simpleRuntimeMap)
   }
 
-  it should "create a complex attribute runtime environment with lists and combined inline/variable declarations" in {
+  it should "create a complex runtime environment with attribute lists and combined inline declarations/variables" in {
     WorkflowRuntime(complexAttributeRuntime) shouldBe Right(complexAttributeRuntimeMap)
   }
 
