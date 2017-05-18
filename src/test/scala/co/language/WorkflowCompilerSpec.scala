@@ -77,9 +77,6 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |dummy = "tester"
       |dummy2 = dummy
       |dummy3 = ENUM.COMPONENT.STATIC
-      |ent = ENTITY(
-      |  Name : dummy
-      |)
       |dummy4 = PROPERTY( 
       |  Name : dummy2
       |)
@@ -231,7 +228,6 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
         AttributeToValue("Name",VariableValue("dummy2"))
       ))), 
     "dummy" -> StringValue("tester"), 
-    "ent" -> ConstructorValue(Entity(List(AttributeToValue("Name",VariableValue("dummy"))))), 
     "dummy3" -> EnumValue(Enum("ComponentType","STATIC")), 
     "dummy2" -> VariableValue("dummy4")
   )

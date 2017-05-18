@@ -14,6 +14,7 @@ object WorkflowRuntime {
 	val attributeErr: String = "no such attribute exists for specified constructor with name "
 	val attributeTypeErr: String = "illegal type found for attribute "
 	val attributeIncorrectArgc: String = "incorrect number of arguments found for attribute "
+	val constructorIncorrectArgc: String = "incorrect number of arguments found for constructor "
 	val variableErr: String = "no variable found with name "
 
 	def lookupEnv(root: Positional, env: Map[String, Value], register: Option[String]): Either[WorkflowRuntimeError, Value] = {
@@ -75,7 +76,7 @@ object WorkflowRuntime {
 				register match {
 					case Some(keyToUse) => {
 						env(keyToUse) = root.asInstanceOf[Value]
-						checkConstructor(value, env, keyToUse) match {
+						checkConstructor(root, value, env, keyToUse) match {
 							case Some(err) => return Left(err)
 							case None => {}
 						}
@@ -149,33 +150,41 @@ object WorkflowRuntime {
 		}
 	}
 
-	def loopAttributes(attrs: Seq[Attribute], value: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
+	def loopAttributes(root: Positional, attrs: Seq[Attribute], constructor: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
+		val mm: collection.immutable.Map[String, collection.immutable.Map[String, Any]] = WorkflowAttributeTypeChecker.typeChecker(constructor.getClass.getSimpleName)
+		var reqAttrKeys: Set[String] = Set()
+		for(attr <- mm.keySet) if(mm(attr)("min").asInstanceOf[Int] > 0) reqAttrKeys = reqAttrKeys + (attr)
+		var foundKeys: Set[String] = Set()
+
 		for(attr <- attrs) {
-			// val mm = collection.mutable.Map[String, Map[String, Any]]() ++= WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
-			val mm: collection.immutable.Map[String, collection.immutable.Map[String, Any]] = WorkflowAttributeTypeChecker.typeChecker(value.getClass.getSimpleName)
+			attr match {
+				case AttributeToValue(key, value) => foundKeys = foundKeys + (key)
+				case AttributeToList(key, values) => foundKeys = foundKeys + (key)
+			}
 			interpret(attr, env, Some(keyToUse), Some(mm)) match {
 				case Left(err) => return Some(err)
 				case _ => {}
 			}
 		}
+		if(reqAttrKeys != foundKeys) return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorIncorrectArgc + constructor.getClass.getSimpleName))
 		return None
 	}
 
-	def checkConstructor(value: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
-		value match {
-			case Page(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Template(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Component(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Event(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Listener(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Filter(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Connective(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Expression(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Arg(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case ReferenceArg(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case PrimitiveArg(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Property(attrs) => return loopAttributes(attrs, value, env, keyToUse)
-			case Entity(attrs) => return loopAttributes(attrs, value, env, keyToUse)
+	def checkConstructor(root: Positional, constructor: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
+		constructor match {
+			case Page(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Template(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Component(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Event(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Listener(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Filter(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Connective(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Expression(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Arg(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case ReferenceArg(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case PrimitiveArg(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Property(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Entity(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
 		}
 		return None
 	}
