@@ -10,21 +10,22 @@ import util.control.Breaks._
 
 object WorkflowRuntime {
 
-	val registerErr: String = "no legal name in register found"
-	val attributeErr: String = "no such attribute exists for specified constructor with name "
-	val attributeTypeErr: String = "illegal type found for attribute "
-	val attributeIncorrectArgc: String = "incorrect number of arguments found for attribute "
-	val constructorIncorrectArgc: String = "incorrect number of arguments found for constructor "
-	val variableErr: String = "no variable found with name "
+	val registerErr: String = "no legal value in register found"
+	val typeCheckerErr: String = "no attribute typechecker found"
+	val illegalAttributeErr: String = "no attribute"
+	val attributeTypeErr: String = "illegal type found"
+	val incorrectArgcErr: String = "incorrect number of arguments found"
+	val variableErr: String = "no variable found"
+	def illegalAttributeLabel(name: String): String = return " '" + name + "' found"
+	def variableLabel(name: String): String = return " with name '" + name + "'"
+	def constructorLabel(name: String): String = return " for constructor '" + name + "'"
+	def attributeLabel(name: String): String = return " for attribute '" + name + "'"
+	def indexLabel(index: String): String = return " at index " + index
+	def registerLabel(name: String): String = return ", expected '" + name + "'"
 
-	def lookupEnv(root: Positional, env: Map[String, Value], register: Option[String]): Either[WorkflowRuntimeError, Value] = {
-		register match {
-			case Some(keyToUse) => {
-				if(!env.contains(keyToUse)) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), "could not find variable " + keyToUse)) 
-				return Right(env(keyToUse))
-			}
-			case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), "no legal lvalue supplied")) 
-		}
+	def lookupEnv(root: Positional, env: Map[String, Value], register: String): Either[WorkflowRuntimeError, Value] = {
+		if(!env.contains(register)) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), variableErr + variableLabel(register))) 
+		return Right(env(register))
 	}
 
 	def interpret(root: Positional, env: Map[String, Value], register: Option[String], attrTypeChecker: Option[collection.immutable.Map[String, collection.immutable.Map[String, Any]]]): Either[WorkflowRuntimeError, Map[String, Value]] = {
@@ -44,7 +45,7 @@ object WorkflowRuntime {
 			case StringValue(value) => { 
 				register match {
 					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr + registerLabel("variable name")))
 				}
 				return Right(env)
 			}
@@ -52,24 +53,23 @@ object WorkflowRuntime {
 			case EnumValue(value) => { 
 				register match {
 					case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr + registerLabel("variable name")))
 				}
 				return Right(env)
 			}
 
 			case VariableValue(value) => { 
-				lookupEnv(root, env, Some(value)) match {
-					case Left(err) => { 
-						return Left(err)
-					}
-					case Right(value) => { 
-						register match {
-							case Some(keyToUse) => env(keyToUse) = root.asInstanceOf[Value]
-							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+				register match {
+					case Some(keyToUse) => {
+						lookupEnv(root, env, value) match {
+							case Left(err) => return Left(err)
+							case Right(value) => env(keyToUse) = root.asInstanceOf[Value]
 						}
 					}
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr + registerLabel("variable name")))
 				}
 				return Right(env)
+				
 			}
 
 			case ConstructorValue(value) => { 
@@ -81,7 +81,7 @@ object WorkflowRuntime {
 							case None => {}
 						}
 					}
-					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr + registerLabel("variable name")))
 				}	
 				return Right(env)
 
@@ -89,42 +89,36 @@ object WorkflowRuntime {
 
 			case AttributeToList(key, values) => { 
 				register match {
-					case Some(keyToUse) => {
+					case Some(constructorName) => {
 						attrTypeChecker match {
 							case Some(typeChecker) => {	
 								if(typeChecker.contains(key)) {
 									val typeInfo: collection.immutable.Map[String, Any] = typeChecker(key)
 									val typeName = typeInfo("class")
-									
-									// TODO: pass index into checkAttribute and print out in error
 									var index = 0
-
 									for(value <- values) {
-										checkAttribute(key, value, root, env, keyToUse, typeName) match {
+										checkAttribute(root, key, value, env, typeName, Some(index.toString)) match {
 											case Some(err) => return Left(err)
 											case None => index += 1
 										}
 									}
 									val typeMin: Int = typeInfo("min").asInstanceOf[Int]
 									val typeMax: Int = typeInfo("max").asInstanceOf[Int]
-									if(typeMin > index || typeMax < index) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeIncorrectArgc + key))
+									if(typeMin > index || typeMax < index) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), incorrectArgcErr + attributeLabel(key)))
 									return Right(env)
-								} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeErr + key))
+								} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), illegalAttributeErr + illegalAttributeLabel(key) + constructorLabel(constructorName)))
 							}
-							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), typeCheckerErr))
 						}
 					}
-					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr + registerLabel("constructor name")))
 				} 
 				return Right(env)
 			}
 
-			// TODO:
-			// 2. check that correct attributes exist (check that all attributes have been accounted for
-			// on close of constructor)
 			case AttributeToValue(key, value) => {
 				register match {
-					case Some(keyToUse) => {
+					case Some(constructorName) => {
 						attrTypeChecker match {
 							case Some(typeChecker) => {	
 								if(typeChecker.contains(key)) {
@@ -132,25 +126,25 @@ object WorkflowRuntime {
 									val typeName = typeInfo("class")
 									val typeMin: Int = typeInfo("min").asInstanceOf[Int]
 									val typeMax: Int = typeInfo("max").asInstanceOf[Int]
-									if(typeMin != 1 || typeMax != 1) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeIncorrectArgc + key))
-									checkAttribute(key, value, root, env, keyToUse, typeName) match {
+									if(typeMin != 1 || typeMax != 1) return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), incorrectArgcErr + attributeLabel(key)))
+									checkAttribute(root, key, value, env, typeName, None) match {
 										case Some(err) => return Left(err)
 										case None => return Right(env)
 									}
 									return Right(env)
-								} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeErr + key))
+								} else return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), illegalAttributeErr + illegalAttributeLabel(key) + constructorLabel(constructorName)))
 							}
-							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+							case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), typeCheckerErr))
 						}
 					}
-					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
+					case None => return Left(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr + registerLabel("constructor name")))
 				}
 				return Right(env)
 			}
 		}
 	}
 
-	def loopAttributes(root: Positional, attrs: Seq[Attribute], constructor: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
+	def loopAttributes(root: Positional, attrs: Seq[Attribute], constructor: Constructor, env: Map[String, Value]): Option[WorkflowRuntimeError] = {
 		val mm: collection.immutable.Map[String, collection.immutable.Map[String, Any]] = WorkflowAttributeTypeChecker.typeChecker(constructor.getClass.getSimpleName)
 		var reqAttrKeys: Set[String] = Set()
 		for(attr <- mm.keySet) if(mm(attr)("min").asInstanceOf[Int] > 0) reqAttrKeys = reqAttrKeys + (attr)
@@ -161,65 +155,66 @@ object WorkflowRuntime {
 				case AttributeToValue(key, value) => foundKeys = foundKeys + (key)
 				case AttributeToList(key, values) => foundKeys = foundKeys + (key)
 			}
-			interpret(attr, env, Some(keyToUse), Some(mm)) match {
+			interpret(attr, env, Some(constructor.getClass.getSimpleName), Some(mm)) match {
 				case Left(err) => return Some(err)
 				case _ => {}
 			}
 		}
-		if(reqAttrKeys != foundKeys) return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), constructorIncorrectArgc + constructor.getClass.getSimpleName))
+		if(reqAttrKeys != foundKeys) return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), incorrectArgcErr + constructorLabel(constructor.getClass.getSimpleName)))
 		return None
 	}
 
 	def checkConstructor(root: Positional, constructor: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
 		constructor match {
-			case Page(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Template(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Component(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Event(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Listener(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Filter(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Connective(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Expression(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Arg(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case ReferenceArg(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case PrimitiveArg(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Property(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
-			case Entity(attrs) => return loopAttributes(root, attrs, constructor, env, keyToUse)
+			case Page(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Template(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Component(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Event(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Listener(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Filter(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Connective(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Expression(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Arg(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case ReferenceArg(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case PrimitiveArg(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Property(attrs) => return loopAttributes(root, attrs, constructor, env)
+			case Entity(attrs) => return loopAttributes(root, attrs, constructor, env)
 		}
 		return None
 	}
 
-	def checkAttribute(key: String, value: Value, root: Positional, env: Map[String, Value], keyToUse: String, typeName: Any): Option[WorkflowRuntimeError] = {		
-		// register match {
-		// 	case Some(keyToUse) => {
-				var resolved: Value = value
-				breakable {
-					while(true) {
-				        resolved match {
-							case VariableValue(varName) => {
-								if(env.contains(varName)) {
-									resolved = env(varName)
-								} else return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), variableErr + varName))
-							}
-							case ConstructorValue(constructed) => {
-								constructed.getClass match {
-									case `typeName` => return None
-									case _ => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
-								} 
-							}
-							case _ => break
-						}
+	def checkAttribute(root: Positional, key: String, value: Value, env: Map[String, Value], typeName: Any, index: Option[String]): Option[WorkflowRuntimeError] = {		
+		var resolved: Value = value
+		breakable {
+			while(true) {
+		        resolved match {
+					case VariableValue(varName) => {
+						if(env.contains(varName)) {
+							resolved = env(varName)
+						} else return Some(constructAttributeError(root, key, variableErr + variableLabel(varName), index))
 					}
+					case ConstructorValue(constructed) => {
+						constructed.getClass match {
+							case `typeName` => return None
+							case _ => return Some(constructAttributeError(root, key, attributeTypeErr, index))
+						} 
+					}
+					case _ => break
 				}
+			}
+		}
 
-				resolved.getClass match {
-					case `typeName` => return None
-					case _ => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), attributeTypeErr + key))
-				}
-		// 	}
-		// 	case None => return Some(WorkflowRuntimeError(Location(root.pos.line, root.pos.column), registerErr))
-		// }
-		// return None
+		resolved.getClass match {
+			case `typeName` => return None
+			case _ => return Some(constructAttributeError(root, key, attributeTypeErr, index))
+		}
+	}
+
+	def constructAttributeError(root: Positional, attrName: String, baseErrString: String, index: Option[String]): WorkflowRuntimeError = {
+		index match {
+			case Some(pos) => return WorkflowRuntimeError(Location(root.pos.line, root.pos.column), baseErrString + attributeLabel(attrName) + indexLabel(pos))
+			case None => return WorkflowRuntimeError(Location(root.pos.line, root.pos.column), baseErrString + attributeLabel(attrName))
+		}
 	}
 
 	def apply(code: String): Either[WorkflowError, Map[String, Value]] = {

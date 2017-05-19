@@ -1,11 +1,3 @@
-// TODO: enumerate constructors and their respective maps of attribute names to types 
-// to then import in runtime when interpreting code
-
-// val toMatch = Map[String, Any](
-// 	"Name" 		-> classOf[StringValue],
-// 	"Entity"	-> classOf[EnumValue]
-// ) 
-
 package co.language.runtime
 
 import co.language.parser._

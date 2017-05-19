@@ -1,6 +1,6 @@
 package co.language
 
-import co.language.compiler.{Location, WorkflowCompiler, WorkflowParserError}
+import co.language.compiler.{Location, WorkflowCompiler, WorkflowParserError, WorkflowRuntimeError}
 import co.language.parser._
 import org.scalatest.{FlatSpec, Matchers}
 import co.language.runtime.WorkflowRuntime
@@ -97,6 +97,66 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       |  ), prop]
       |)
       |dummy4 = PROPERTY( 
+      |  Name : dummy2
+      |)
+    """.stripMargin.trim
+
+  val mixMatchArgcRuntime = 
+    """
+      |dummy2 = "val2"
+      |prop = PROPERTY( 
+      |  Name : [dummy2]
+      |)
+      |ent = ENTITY(
+      |  Name : [dummy2],
+      |  Properties : [PROPERTY( 
+      |    Name : dummy
+      |  ), prop]
+      |)
+    """.stripMargin.trim
+
+  val illegalSimpleRuntime = 
+    """
+    |dummy = "firststring"
+    |dummy2 = "secondstring"
+    |dummy3 = dummy2
+    |dummy4 = dummy4
+    """.stripMargin.trim
+
+  val illegalAttributeArgc = 
+    """
+      |dummy = "val"
+      |dummy2 = "val2"
+      |prop = PROPERTY( 
+      |  Name : dummy2
+      |)
+      |ent = ENTITY(
+      |  Name : [dummy, dummy2],
+      |  Properties : [prop]
+      |)
+    """.stripMargin.trim
+
+  val illegalConstructorArgc = 
+    """
+      |dummy2 = "val2"
+      |ent = ENTITY(
+      |  Name : [dummy2]
+      |)
+    """.stripMargin.trim
+
+  val illegalAttribute = 
+    """
+      |dummy2 = "val2"
+      |prop = PROPERTY( 
+      |  Name : [dummy2],
+      |  IllegalThing : dummy2
+      |)
+    """.stripMargin.trim
+
+  val illegalAttributeType = 
+    """
+      |dummy2 = ENUM.COMPONENT.STATIC
+      |prop = PROPERTY( 
       |  Name : dummy2
       |)
     """.stripMargin.trim
@@ -256,6 +316,36 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
       )))
   )
 
+  val mixMatchArgcRuntimeMap = Map(
+    "dummy2" -> StringValue("val2"),
+    "prop" -> ConstructorValue(Property(
+      List(
+        AttributeToList("Name",List(
+          VariableValue("dummy2")
+        ))
+      ))),
+    "ent" -> ConstructorValue(Entity(
+      List(
+        AttributeToList("Name",List(
+          VariableValue("dummy2")
+        )),
+        AttributeToList("Properties",List(
+          ConstructorValue(Property(
+            List(
+              AttributeToValue("Name",VariableValue("dummy"))
+            ))),
+          VariableValue("prop")
+        ))
+      )))
+  )
+
+
+  val illegalSimpleRuntimeErr = WorkflowRuntimeError(Location(4,10), "no variable found with name 'dummy4'")
+  val illegalAttributeArgcErr = WorkflowRuntimeError(Location(7,3), "incorrect number of arguments found for attribute 'Name'")
+  val illegalConstructorArgcErr = WorkflowRuntimeError(Location(2,7), "incorrect number of arguments found for constructor 'Entity'")
+  val illegalAttributeErr = WorkflowRuntimeError(Location(4,3), "no attribute 'IllegalThing' found for constructor 'Property'")
+  val illegalAttributeTypeErr = WorkflowRuntimeError(Location(3,3), "illegal type found for attribute 'Name'")
+
   "Workflow compiler" should "successfully parse a simple variable declaration" in {
     WorkflowCompiler(simpleDeclare) shouldBe Right(simpleAST)
   }
@@ -290,6 +380,30 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
   it should "create a complex runtime environment with attribute lists and combined inline declarations/variables" in {
     WorkflowRuntime(complexAttributeRuntime) shouldBe Right(complexAttributeRuntimeMap)
+  }
+
+  it should "create a runtime environment with varied attribute values/lists as long as argc is legal" in {
+    WorkflowRuntime(mixMatchArgcRuntime) shouldBe Right(mixMatchArgcRuntimeMap)
+  }
+
+  it should "return an error when an undeclared variable is referenced" in {
+    WorkflowRuntime(illegalSimpleRuntime) shouldBe Left(illegalSimpleRuntimeErr)
+  }
+
+  it should "return an error when an illegal number of arguments are passed to an attribute" in {
+    WorkflowRuntime(illegalAttributeArgc) shouldBe Left(illegalAttributeArgcErr)
+  }
+
+  it should "return an error when an illegal number of arguments (attributes) are passed to a constructor" in {
+    WorkflowRuntime(illegalConstructorArgc) shouldBe Left(illegalConstructorArgcErr)
+  }
+
+  it should "return an error when an illegal attribute is passed to a constructor" in {
+    WorkflowRuntime(illegalAttribute) shouldBe Left(illegalAttributeErr)
+  }
+
+  it should "return an error when an illegal argument type is passed to an attribute" in {
+    WorkflowRuntime(illegalAttributeType) shouldBe Left(illegalAttributeTypeErr)
   }
 
 }
