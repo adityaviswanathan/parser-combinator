@@ -4,7 +4,6 @@ import scala.util.parsing.input.Positional
 import co.language.lexer.WorkflowLexer
 import co.language.compiler.{Location, WorkflowError, WorkflowRuntimeError, WorkflowCompiler}
 import co.language.parser._
-
 import scala.collection.mutable.{Map}
 import util.control.Breaks._
 
@@ -217,18 +216,27 @@ object WorkflowRuntime {
 		}
 	}
 
-	def apply(code: String): Either[WorkflowError, Map[String, Value]] = {
-		WorkflowCompiler(code) match { 
-			case Left(msg: WorkflowError) => {
-				return Left(msg)
-			}
-			case Right(root: WorkflowAST) => {
-				// CORE FUNCTIONALITY (SURROUNDING CODE IS REALLY COMPILER STUFF)
-				interpret(root, Map[String, Value](), None, None) match {
-					case Left(err) => return Left(err)
-					case Right(env) => return Right(env)
-				}
-			}
+	// def apply(code: String): Either[WorkflowError, Map[String, Value]] = {
+	// 	WorkflowCompiler(code) match { 
+	// 		case Left(msg: WorkflowError) => {
+	// 			return Left(msg)
+	// 		}
+	// 		case Right(root: WorkflowAST) => {
+	// 			// CORE FUNCTIONALITY (SURROUNDING CODE IS REALLY COMPILER STUFF)
+	// 			interpret(root, Map[String, Value](), None, None) match {
+	// 				case Left(err) => return Left(err) // THROW RUNTIME ERROR
+	// 				case Right(env) => return Right(env)
+	// 			}
+
+	// 			// THE RUNTIME DOES SEMANTIC CHECKING AND CODE GENERATION
+	// 		}
+	// 	}
+	// }
+
+	def apply(root: WorkflowAST): Either[WorkflowError, Map[String, Value]] = {
+		interpret(root, Map[String, Value](), None, None) match {
+			case Left(err) => return Left(err) // THROW RUNTIME ERROR
+			case Right(env) => return Right(env)
 		}
 	}
 

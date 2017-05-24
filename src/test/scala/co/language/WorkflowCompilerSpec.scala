@@ -347,63 +347,63 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
   val illegalAttributeTypeErr = WorkflowRuntimeError(Location(3,3), "illegal type found for attribute 'Name'")
 
   "Workflow compiler" should "successfully parse a simple variable declaration" in {
-    WorkflowCompiler(simpleDeclare) shouldBe Right(simpleAST)
+    WorkflowCompiler.syntax(simpleDeclare) shouldBe Right(simpleAST)
   }
 
   it should "successfully parse multiple simple variable declarations" in {
-    WorkflowCompiler(multiSimpleDeclare) shouldBe Right(multiSimpleAST)
+    WorkflowCompiler.syntax(multiSimpleDeclare) shouldBe Right(multiSimpleAST)
   }
 
   it should "successfully parse multiple constructor declarations" in {
-    WorkflowCompiler(multiConstructorDeclare) shouldBe Right(multiConstructorAST)
+    WorkflowCompiler.syntax(multiConstructorDeclare) shouldBe Right(multiConstructorAST)
   }
 
   it should "successfully parse a multi-type constructor declaration" in {
-    WorkflowCompiler(multiTypeDeclare) shouldBe Right(multiTypeAST)
+    WorkflowCompiler.syntax(multiTypeDeclare) shouldBe Right(multiTypeAST)
   }
 
   it should "successfully parse a nested constructor declaration" in {
-    WorkflowCompiler(nestedDeclare) shouldBe Right(nestedAST)
+    WorkflowCompiler.syntax(nestedDeclare) shouldBe Right(nestedAST)
   }
 
   it should "successfully parse a doubly nested constructor declaration" in {
-    WorkflowCompiler(doublyNestedDeclare) shouldBe Right(doublyNestedAST)
+    WorkflowCompiler.syntax(doublyNestedDeclare) shouldBe Right(doublyNestedAST)
   }
 
   it should "return an error with an invalid workflow" in {
-    WorkflowCompiler(invalidCode) shouldBe Left(errorMsg)
+    WorkflowCompiler.syntax(invalidCode) shouldBe Left(errorMsg)
   }
 
   it should "create a simple runtime environment from variable declarations" in {
-    WorkflowRuntime(simpleRuntime) shouldBe Right(simpleRuntimeMap)
+    WorkflowCompiler(simpleRuntime) shouldBe Right(simpleRuntimeMap)
   }
 
   it should "create a complex runtime environment with attribute lists and combined inline declarations/variables" in {
-    WorkflowRuntime(complexAttributeRuntime) shouldBe Right(complexAttributeRuntimeMap)
+    WorkflowCompiler(complexAttributeRuntime) shouldBe Right(complexAttributeRuntimeMap)
   }
 
   it should "create a runtime environment with varied attribute values/lists as long as argc is legal" in {
-    WorkflowRuntime(mixMatchArgcRuntime) shouldBe Right(mixMatchArgcRuntimeMap)
+    WorkflowCompiler(mixMatchArgcRuntime) shouldBe Right(mixMatchArgcRuntimeMap)
   }
 
   it should "return an error when an undeclared variable is referenced" in {
-    WorkflowRuntime(illegalSimpleRuntime) shouldBe Left(illegalSimpleRuntimeErr)
+    WorkflowCompiler(illegalSimpleRuntime) shouldBe Left(illegalSimpleRuntimeErr)
   }
 
   it should "return an error when an illegal number of arguments are passed to an attribute" in {
-    WorkflowRuntime(illegalAttributeArgc) shouldBe Left(illegalAttributeArgcErr)
+    WorkflowCompiler(illegalAttributeArgc) shouldBe Left(illegalAttributeArgcErr)
   }
 
   it should "return an error when an illegal number of arguments (attributes) are passed to a constructor" in {
-    WorkflowRuntime(illegalConstructorArgc) shouldBe Left(illegalConstructorArgcErr)
+    WorkflowCompiler(illegalConstructorArgc) shouldBe Left(illegalConstructorArgcErr)
   }
 
   it should "return an error when an illegal attribute is passed to a constructor" in {
-    WorkflowRuntime(illegalAttribute) shouldBe Left(illegalAttributeErr)
+    WorkflowCompiler(illegalAttribute) shouldBe Left(illegalAttributeErr)
   }
 
   it should "return an error when an illegal argument type is passed to an attribute" in {
-    WorkflowRuntime(illegalAttributeType) shouldBe Left(illegalAttributeTypeErr)
+    WorkflowCompiler(illegalAttributeType) shouldBe Left(illegalAttributeTypeErr)
   }
 
 }
