@@ -116,6 +116,10 @@ object WorkflowParser extends Parsers {
   }
 
   def constructor: Parser[Constructor] = positioned {
+    val appConstructor = (APP() ~ OPENBLOCK() ~ INDENT() ~ 
+    rep(attribute ~ COMMA()) ~ attribute ~ DEDENT() ~ CLOSEBLOCK()) ^^ {
+     case _ ~ _ ~ _ ~ attrs ~ lastAttribute ~ _ ~ _ => App(attrs.map(_._1) ++ List(lastAttribute)) }
+
     val pageConstructor = (PAGE() ~ OPENBLOCK() ~ INDENT() ~ 
     rep(attribute ~ COMMA()) ~ attribute ~ DEDENT() ~ CLOSEBLOCK()) ^^ {
      case _ ~ _ ~ _ ~ attrs ~ lastAttribute ~ _ ~ _ => Page(attrs.map(_._1) ++ List(lastAttribute)) }
@@ -168,9 +172,9 @@ object WorkflowParser extends Parsers {
     rep(attribute ~ COMMA()) ~ attribute ~ DEDENT() ~ CLOSEBLOCK()) ^^ {
      case _ ~ _ ~ _ ~ attrs ~ lastAttribute ~ _ ~ _ => Property(attrs.map(_._1) ++ List(lastAttribute)) }
   
-    (pageConstructor | templateConstructor | componentConstructor | eventConstructor | listenerConstructor 
-      | filterConstructor | connectiveConstructor | expressionConstructor | argConstructor | referenceArgConstructor 
-      | primitiveArgConstructor | entityConstructor | propertyConstructor)
+    (appConstructor | pageConstructor | templateConstructor | componentConstructor | eventConstructor 
+      | listenerConstructor | filterConstructor | connectiveConstructor | expressionConstructor | argConstructor 
+      | referenceArgConstructor | primitiveArgConstructor | entityConstructor | propertyConstructor)
   }
 
   def attribute: Parser[Attribute] = positioned {

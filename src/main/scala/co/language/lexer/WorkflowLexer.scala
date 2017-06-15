@@ -18,10 +18,10 @@ object WorkflowLexer extends RegexParsers {
   def tokens: Parser[List[WorkflowToken]] = {
     phrase(rep1(componentEnum | elementEnum | eventEnum | listenerEnum | connectiveEnum 
       | operatorEnum | argEnum | appEnum | exit | readInput | callService | switch 
-      | otherwise | colon | arrow | equals | comma | literal | page | template | component 
-      | event | listener | filter | connective | expression | arg | referenceArg | primitiveArg 
-      | entity | property | identifier | indentation |  equal | openBlock | closeBlock 
-      | openArray | closeArray )) ^^ { rawTokens =>
+      | otherwise | colon | arrow | equals | comma | literal | app | page | template 
+      | component | event | listener | filter | connective | expression | arg | referenceArg 
+      | primitiveArg | entity | property | identifier | indentation |  equal | openBlock 
+      | closeBlock | openArray | closeArray )) ^^ { rawTokens =>
       processIndentations(rawTokens)
     }
   }
@@ -147,6 +147,7 @@ object WorkflowLexer extends RegexParsers {
   def openArray     = positioned { "["             ^^ (_ => OPENARRAY()) }
   def closeArray    = positioned { "]"             ^^ (_ => CLOSEARRAY()) }
 
+  def app           = positioned { "APP"           ^^ (_ => APP()) }
   def page          = positioned { "PAGE"          ^^ (_ => PAGE()) }
   def template      = positioned { "TEMPLATE"      ^^ (_ => TEMPLATE()) }
   def component     = positioned { "COMPONENT"     ^^ (_ => COMPONENT()) }

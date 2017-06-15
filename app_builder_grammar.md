@@ -130,6 +130,10 @@ Home = Page
 
 ## Language Keywords
 
+### `App` properties
+- Pages (n >= 0): `Page[]`
+- Entities (n >= 0): `Entity[]`
+
 ### `Page` properties
 - Templates (n >= 0): `Template[]`
 - Name (n = 1): `String`

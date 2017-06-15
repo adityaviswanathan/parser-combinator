@@ -165,6 +165,7 @@ object WorkflowRuntime {
 
 	def checkConstructor(root: Positional, constructor: Constructor, env: Map[String, Value], keyToUse: String): Option[WorkflowRuntimeError] = {
 		constructor match {
+			case App(attrs) => return loopAttributes(root, attrs, constructor, env)
 			case Page(attrs) => return loopAttributes(root, attrs, constructor, env)
 			case Template(attrs) => return loopAttributes(root, attrs, constructor, env)
 			case Component(attrs) => return loopAttributes(root, attrs, constructor, env)

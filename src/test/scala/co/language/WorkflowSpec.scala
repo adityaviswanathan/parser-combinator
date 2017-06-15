@@ -4,6 +4,7 @@ import co.language.compiler.{Location, WorkflowCompiler, WorkflowParserError, Wo
 import co.language.parser._
 import org.scalatest.{FlatSpec, Matchers}
 import co.language.runtime.WorkflowRuntime
+import co.language.generator.WorkflowGenerator
 
 class WorkflowCompilerSpec extends FlatSpec with Matchers {
 
@@ -406,4 +407,43 @@ class WorkflowCompilerSpec extends FlatSpec with Matchers {
     WorkflowCompiler(illegalAttributeType) shouldBe Left(illegalAttributeTypeErr)
   }
 
+}
+
+class WorkflowGeneratorSpec extends FlatSpec with Matchers {
+  val complexAttributeRuntimeMap = Map(
+    "dummy" -> StringValue("val"),
+    "dummy2" -> StringValue("val2"),
+    "prop" -> ConstructorValue(Property(
+      List(
+        AttributeToValue("Name",VariableValue("dummy2"))
+      ))),
+    "ent" -> ConstructorValue(Entity(
+      List(
+        AttributeToValue("Name",VariableValue("dummy")),
+        AttributeToList("Properties",List(
+          ConstructorValue(Property(
+            List(
+              AttributeToValue("Name",VariableValue("dummy"))
+            ))),
+          VariableValue("prop"),
+          ConstructorValue(Property(
+            List(
+              AttributeToValue("Name",StringValue("baby"))
+            )))
+        ))
+      ))),
+    "ent2" -> VariableValue("ent"), 
+    "dummy4" -> ConstructorValue(Property(
+      List(
+        AttributeToValue("Name",VariableValue("dummy2"))
+      ))),
+    "app" -> ConstructorValue(App(
+      List(
+        AttributeToList("Entities",List(VariableValue("ent2")))
+      )))
+  )
+
+  "Workflow generator" should "initialize database when supplied legal entities and properties" in {
+    WorkflowGenerator(complexAttributeRuntimeMap)
+  }
 }

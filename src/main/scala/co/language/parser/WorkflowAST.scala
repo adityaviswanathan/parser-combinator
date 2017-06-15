@@ -36,6 +36,7 @@ case class VariableValue(key: String) extends Value
 
 // LANGUAGE KEYWORDS (CONSTRUCTORS)
 sealed trait Constructor extends WorkflowAST
+case class App(attributes: Seq[Attribute]) extends Constructor
 case class Page(attributes: Seq[Attribute]) extends Constructor
 case class Template(attributes: Seq[Attribute]) extends Constructor
 case class Component(attributes: Seq[Attribute]) extends Constructor

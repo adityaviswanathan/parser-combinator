@@ -35,6 +35,7 @@ case class EQUAL() extends WorkflowToken
 
 // LANGUAGE KEYWORDS (CONSTRUCTORS)
 case class CONSTRUCTOR() extends WorkflowToken
+case class APP() extends WorkflowToken
 case class PAGE() extends WorkflowToken
 case class TEMPLATE() extends WorkflowToken
 case class COMPONENT() extends WorkflowToken

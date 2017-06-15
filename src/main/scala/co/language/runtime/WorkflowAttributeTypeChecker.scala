@@ -4,6 +4,16 @@ import co.language.parser._
 
 object WorkflowAttributeTypeChecker {
 	val typeChecker = Map[String, Map[String, Map[String, Any]]](
+		"App" 		-> Map[String, Map[String, Any]](
+			"Pages"		-> Map[String, Any](
+				"class" -> classOf[Page],
+				"min"	-> 0,
+				"max"	-> 0 ),
+			"Entities"	-> Map[String, Any](
+				"class" -> classOf[Entity],
+				"min"	-> 0,
+				"max"	-> 0 )
+ 		),
 		"Page" 		-> Map[String, Map[String, Any]](
 			"Templates"		-> Map[String, Any](
 				"class" -> classOf[Template],
